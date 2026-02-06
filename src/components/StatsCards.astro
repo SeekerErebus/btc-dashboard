@@ -1,0 +1,55 @@
+---
+import cpiData from "../data/cpi.json";
+import btcData from "../data/btc.json";
+
+const baseCpi = cpiData.data[0].cpi;
+const currentCpi = cpiData.data[cpiData.data.length - 1].cpi;
+const totalDebasement = ((1 - baseCpi / currentCpi) * 100).toFixed(1);
+
+const yearsSpan = cpiData.data[cpiData.data.length - 1].year - cpiData.data[0].year;
+const avgInflation = (((currentCpi / baseCpi) ** (1 / yearsSpan) - 1) * 100).toFixed(1);
+
+const btcStart = btcData.data[0];
+const btcEnd = btcData.data[btcData.data.length - 1];
+const btcYears = btcEnd.year - btcStart.year;
+const btcCagr = (((btcEnd.price / btcStart.price) ** (1 / btcYears) - 1) * 100).toFixed(0);
+
+const btcMultiple = (btcEnd.price / btcStart.price).toFixed(0);
+
+const stats = [
+  {
+    label: "Dollar debasement since 1971",
+    value: `-${totalDebasement}%`,
+    color: "text-red-accent",
+    detail: `$1.00 → $${(baseCpi / currentCpi).toFixed(2)} in real terms`,
+  },
+  {
+    label: "Average annual inflation (CPI)",
+    value: `${avgInflation}%`,
+    color: "text-red-accent",
+    detail: `Compounded over ${yearsSpan} years`,
+  },
+  {
+    label: "Bitcoin CAGR since 2010",
+    value: `${btcCagr}%`,
+    color: "text-green-accent",
+    detail: `$${btcStart.price} → $${btcEnd.price.toLocaleString()} per year avg`,
+  },
+  {
+    label: "Bitcoin total return",
+    value: `${Number(btcMultiple).toLocaleString()}x`,
+    color: "text-btc",
+    detail: `From $${btcStart.price} in ${btcStart.year} to $${btcEnd.price.toLocaleString()} in ${btcEnd.year}`,
+  },
+];
+---
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  {stats.map((stat) => (
+    <div class="bg-navy-900 rounded-2xl p-5 border border-navy-700">
+      <p class="text-sm text-navy-400 mb-2">{stat.label}</p>
+      <p class:list={["text-3xl font-mono font-bold", stat.color]}>{stat.value}</p>
+      <p class="text-xs text-navy-500 mt-2">{stat.detail}</p>
+    </div>
+  ))}
+</div>

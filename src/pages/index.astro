@@ -1,0 +1,82 @@
+---
+import Layout from "../layouts/Layout.astro";
+import StatsCards from "../components/StatsCards.astro";
+import PurchasingPowerChart from "../components/PurchasingPowerChart.astro";
+import BtcPriceChart from "../components/BtcPriceChart.astro";
+import ComparisonCalculator from "../components/ComparisonCalculator.astro";
+import Education from "../components/Education.astro";
+---
+
+<Layout title="Purchasing Power Dashboard — Dollar Debasement vs Bitcoin">
+  <div class="min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-navy-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-btc rounded-lg flex items-center justify-center">
+            <span class="text-navy-950 font-bold text-sm">PP</span>
+          </div>
+          <span class="font-semibold text-white text-lg">Purchasing Power</span>
+        </div>
+        <a
+          href="https://github.com/your-username/btc-dashboard"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-navy-400 hover:text-white transition-colors text-sm"
+        >
+          View Source
+        </a>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-white leading-tight">
+          What does a dollar<br />
+          <span class="text-btc">actually buy</span> over time?
+        </h1>
+        <p class="mt-4 text-lg text-navy-400 leading-relaxed">
+          Since Nixon ended dollar-gold convertibility in 1971, the US dollar has lost
+          over 87% of its purchasing power. This dashboard visualizes the erosion of
+          fiat currency value using CPI data and compares it to Bitcoin's emergence as
+          a scarce, non-inflatable alternative.
+        </p>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      <StatsCards />
+    </section>
+
+    <!-- Charts -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 space-y-6">
+      <PurchasingPowerChart />
+      <BtcPriceChart />
+    </section>
+
+    <!-- Calculator -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      <ComparisonCalculator />
+    </section>
+
+    <!-- Education -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <Education />
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-navy-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-navy-500">
+          <p>
+            Data sources: Bureau of Labor Statistics (CPI-U), CoinGecko/CoinMetrics (BTC).
+            Figures are approximate annual averages.
+          </p>
+          <p>Built with Astro, Chart.js & Tailwind CSS</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+</Layout>

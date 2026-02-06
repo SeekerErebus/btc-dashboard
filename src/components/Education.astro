@@ -1,0 +1,32 @@
+---
+const sections = [
+  {
+    title: "What is CPI?",
+    content: `The Consumer Price Index (CPI) is the Bureau of Labor Statistics' primary measure of inflation. It tracks the average price change of a basket of goods and services over time. While widely used, CPI has methodological limitations — hedonic adjustments, substitution effects, and changes to the basket composition mean it may understate the true cost-of-living increase experienced by consumers. Alternative measures like the Chapwood Index or ShadowStats suggest real inflation may be significantly higher.`,
+  },
+  {
+    title: "The Cantillon Effect",
+    content: `Named after 18th-century economist Richard Cantillon, the Cantillon Effect describes how newly created money doesn't enter the economy evenly. Those closest to the money source — banks, large institutions, government contractors — get to spend new money before prices adjust, while everyone else faces higher prices with the same income. This creates a wealth transfer from savers and wage earners to asset holders and those with early access to credit.`,
+  },
+  {
+    title: "August 15, 1971",
+    content: `On this date, President Nixon suspended the dollar's convertibility to gold, ending the Bretton Woods system. Previously, foreign governments could redeem $35 for one ounce of gold, which constrained money supply growth. After the "Nixon Shock," the dollar became a purely fiat currency — backed by nothing but government decree. Since then, the M2 money supply has grown from $685 billion to over $21 trillion, and the dollar has lost over 87% of its purchasing power.`,
+  },
+  {
+    title: "Why Bitcoin?",
+    content: `Bitcoin's fixed supply of 21 million coins makes it the first truly scarce digital asset. Unlike fiat currencies, no central authority can increase Bitcoin's supply. Its emission schedule (halving every ~4 years) is enforced by code and consensus, not policy decisions. While volatile in the short term, Bitcoin has been the best-performing asset class over any 4+ year period since its inception, precisely because it cannot be debased.`,
+  },
+];
+---
+
+<div class="bg-navy-900 rounded-2xl p-6 border border-navy-700">
+  <h2 class="text-xl font-bold text-white mb-6">Understanding the Data</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {sections.map((section) => (
+      <div class="bg-navy-800 rounded-xl p-5 border border-navy-700">
+        <h3 class="text-btc font-semibold mb-3">{section.title}</h3>
+        <p class="text-sm text-slate-300 leading-relaxed">{section.content}</p>
+      </div>
+    ))}
+  </div>
+</div>

@@ -1,0 +1,118 @@
+---
+import cpiData from "../data/cpi.json";
+import btcData from "../data/btc.json";
+
+const cpiJson = JSON.stringify(cpiData.data);
+const btcJson = JSON.stringify(btcData.data);
+
+const years = cpiData.data.map((d) => d.year);
+---
+
+<div class="bg-navy-900 rounded-2xl p-6 border border-navy-700">
+  <h2 class="text-xl font-bold text-white mb-2">Purchasing Power Calculator</h2>
+  <p class="text-sm text-navy-400 mb-6">See what your savings would be worth today — in real purchasing power and in Bitcoin.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div>
+      <label for="calcAmount" class="block text-sm text-navy-400 mb-1">Amount saved</label>
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-navy-400 font-mono">$</span>
+        <input
+          type="number"
+          id="calcAmount"
+          value="10000"
+          min="1"
+          class="w-full bg-navy-800 border border-navy-600 rounded-lg py-2.5 pl-8 pr-4 text-white font-mono focus:border-btc focus:outline-none focus:ring-1 focus:ring-btc"
+        />
+      </div>
+    </div>
+    <div>
+      <label for="calcYear" class="block text-sm text-navy-400 mb-1">Saved in year</label>
+      <select
+        id="calcYear"
+        class="w-full bg-navy-800 border border-navy-600 rounded-lg py-2.5 px-3 text-white font-mono focus:border-btc focus:outline-none focus:ring-1 focus:ring-btc appearance-none"
+      >
+        {years.map((y) => (
+          <option value={y} selected={y === 2000}>{y}</option>
+        ))}
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button
+        id="calcBtn"
+        class="w-full bg-btc hover:bg-btc-light text-navy-950 font-semibold py-2.5 px-4 rounded-lg transition-colors"
+      >
+        Calculate
+      </button>
+    </div>
+  </div>
+
+  <div id="calcResults" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-navy-800 rounded-xl p-5 border border-navy-700">
+      <p class="text-sm text-navy-400 mb-1">Real purchasing power today</p>
+      <p id="resultPurchasing" class="text-3xl font-mono font-bold text-red-accent">—</p>
+      <p id="resultLoss" class="text-sm text-navy-400 mt-1"></p>
+    </div>
+    <div class="bg-navy-800 rounded-xl p-5 border border-navy-700">
+      <p class="text-sm text-navy-400 mb-1">If converted to Bitcoin instead</p>
+      <p id="resultBtc" class="text-3xl font-mono font-bold text-btc">—</p>
+      <p id="resultBtcDetail" class="text-sm text-navy-400 mt-1"></p>
+    </div>
+  </div>
+</div>
+
+<script define:vars={{ cpiJson, btcJson }}>
+  const cpiArr = JSON.parse(cpiJson);
+  const btcArr = JSON.parse(btcJson);
+
+  function calculate() {
+    const amount = parseFloat(document.getElementById("calcAmount").value) || 10000;
+    const year = parseInt(document.getElementById("calcYear").value);
+
+    const yearCpi = cpiArr.find((d) => d.year === year);
+    const currentCpi = cpiArr[cpiArr.length - 1];
+
+    if (!yearCpi || !currentCpi) return;
+
+    const realValue = amount * (yearCpi.cpi / currentCpi.cpi);
+    const lossPercent = ((1 - realValue / amount) * 100).toFixed(1);
+
+    document.getElementById("resultPurchasing").textContent =
+      "$" + realValue.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    document.getElementById("resultLoss").textContent =
+      `Lost ${lossPercent}% of purchasing power since ${year}`;
+
+    const btcEntry = btcArr.find((d) => d.year === year);
+    const currentBtc = btcArr[btcArr.length - 1];
+
+    if (btcEntry && currentBtc) {
+      const btcBought = amount / btcEntry.price;
+      const btcValue = btcBought * currentBtc.price;
+      const gainMultiple = (btcValue / amount).toFixed(0);
+
+      document.getElementById("resultBtc").textContent =
+        "$" + btcValue.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      document.getElementById("resultBtcDetail").textContent =
+        `${btcBought.toFixed(4)} BTC @ $${btcEntry.price.toLocaleString()} — a ${gainMultiple}x return`;
+    } else {
+      document.getElementById("resultBtc").textContent = "N/A";
+      document.getElementById("resultBtcDetail").textContent =
+        `Bitcoin didn't exist yet in ${year}. BTC data available from 2010.`;
+    }
+  }
+
+  function init() {
+    document.getElementById("calcBtn").addEventListener("click", calculate);
+    document.getElementById("calcAmount").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") calculate();
+    });
+    document.getElementById("calcYear").addEventListener("change", calculate);
+    calculate();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+</script>

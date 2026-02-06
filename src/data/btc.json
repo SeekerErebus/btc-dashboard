@@ -1,0 +1,21 @@
+{
+  "description": "Bitcoin approximate annual average price (USD). Pre-2010 prices are negligible/zero. Sources: CoinGecko historical data, CoinMetrics.",
+  "data": [
+    { "year": 2010, "price": 0.09 },
+    { "year": 2011, "price": 6.18 },
+    { "year": 2012, "price": 8.14 },
+    { "year": 2013, "price": 194.0 },
+    { "year": 2014, "price": 502.0 },
+    { "year": 2015, "price": 272.0 },
+    { "year": 2016, "price": 567.0 },
+    { "year": 2017, "price": 4000.0 },
+    { "year": 2018, "price": 7500.0 },
+    { "year": 2019, "price": 7200.0 },
+    { "year": 2020, "price": 11100.0 },
+    { "year": 2021, "price": 47700.0 },
+    { "year": 2022, "price": 19600.0 },
+    { "year": 2023, "price": 28300.0 },
+    { "year": 2024, "price": 62000.0 },
+    { "year": 2025, "price": 97000.0 }
+  ]
+}

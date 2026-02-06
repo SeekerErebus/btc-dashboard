@@ -1,0 +1,136 @@
+---
+import btcData from "../data/btc.json";
+
+const labels = JSON.stringify(btcData.data.map((d) => d.year));
+const prices = JSON.stringify(btcData.data.map((d) => d.price));
+const currentPrice = btcData.data[btcData.data.length - 1].price;
+---
+
+<div class="bg-navy-900 rounded-2xl p-6 border border-navy-700">
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-white">Bitcoin Price History</h2>
+      <p class="text-sm text-navy-400 mt-1">Annual average price (USD)</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <span class="text-2xl font-mono font-bold text-btc">
+          ${currentPrice.toLocaleString()}
+        </span>
+        <p class="text-xs text-navy-400">2025 avg</p>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-navy-400 cursor-pointer select-none">
+        <input type="checkbox" id="logScaleToggle" class="accent-btc w-4 h-4" />
+        <span>Log scale</span>
+      </label>
+    </div>
+  </div>
+  <div class="relative" style="height: 350px;">
+    <canvas id="btcPriceChart"></canvas>
+  </div>
+</div>
+
+<script define:vars={{ labels, prices }}>
+  const labelsArr = JSON.parse(labels);
+  const pricesArr = JSON.parse(prices);
+
+  let chartInstance = null;
+
+  async function initChart() {
+    const { Chart, registerables } = await import("chart.js");
+    Chart.register(...registerables);
+
+    const ctx = document.getElementById("btcPriceChart");
+    if (!ctx) return;
+
+    function createChart(useLog) {
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labelsArr,
+          datasets: [
+            {
+              label: "BTC Price (USD)",
+              data: pricesArr,
+              borderColor: "#F7931A",
+              backgroundColor: "rgba(247, 147, 26, 0.1)",
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: "#F7931A",
+              pointBorderColor: "#0f1629",
+              pointBorderWidth: 2,
+              pointHoverRadius: 7,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: "index",
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "#161d35",
+              borderColor: "#2a3558",
+              borderWidth: 1,
+              titleColor: "#e2e8f0",
+              bodyColor: "#e2e8f0",
+              bodyFont: { family: "JetBrains Mono, monospace" },
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.parsed.y;
+                  return val < 1
+                    ? `$${val.toFixed(2)}`
+                    : `$${val.toLocaleString()}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: "#5a6a8a" },
+              grid: { color: "rgba(42, 53, 88, 0.5)" },
+            },
+            y: {
+              type: useLog ? "logarithmic" : "linear",
+              ticks: {
+                color: "#5a6a8a",
+                callback: (v) => {
+                  if (useLog) {
+                    const allowed = [0.1, 1, 10, 100, 1000, 10000, 100000];
+                    if (allowed.includes(v)) return "$" + v.toLocaleString();
+                    return "";
+                  }
+                  return "$" + v.toLocaleString();
+                },
+              },
+              grid: { color: "rgba(42, 53, 88, 0.5)" },
+            },
+          },
+        },
+      });
+    }
+
+    createChart(false);
+
+    const toggle = document.getElementById("logScaleToggle");
+    if (toggle) {
+      toggle.addEventListener("change", (e) => {
+        createChart(e.target.checked);
+      });
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initChart);
+  } else {
+    initChart();
+  }
+</script>
