@@ -1,6 +1,7 @@
 ---
 import cpiData from "../data/cpi.json";
 import btcData from "../data/btc.json";
+import m2Data from "../data/m2.json";
 
 const baseCpi = cpiData.data[0].cpi;
 const currentCpi = cpiData.data[cpiData.data.length - 1].cpi;
@@ -16,40 +17,78 @@ const btcCagr = (((btcEnd.price / btcStart.price) ** (1 / btcYears) - 1) * 100).
 
 const btcMultiple = (btcEnd.price / btcStart.price).toFixed(0);
 
-const stats = [
-  {
-    label: "Dollar debasement since 1971",
-    value: `-${totalDebasement}%`,
-    color: "text-red-accent",
-    detail: `$1.00 → $${(baseCpi / currentCpi).toFixed(2)} in real terms`,
-  },
-  {
-    label: "Average annual inflation (CPI)",
-    value: `${avgInflation}%`,
-    color: "text-red-accent",
-    detail: `Compounded over ${yearsSpan} years`,
-  },
-  {
-    label: "Bitcoin CAGR since 2010",
-    value: `${btcCagr}%`,
-    color: "text-green-accent",
-    detail: `$${btcStart.price} → $${btcEnd.price.toLocaleString()} per year avg`,
-  },
-  {
-    label: "Bitcoin total return",
-    value: `${Number(btcMultiple).toLocaleString()}x`,
-    color: "text-btc",
-    detail: `From $${btcStart.price} in ${btcStart.year} to $${btcEnd.price.toLocaleString()} in ${btcEnd.year}`,
-  },
-];
+const m2Start = m2Data.data[0].m2;
+const m2End = m2Data.data[m2Data.data.length - 1].m2;
+const m2Growth = ((m2End / m2Start - 1) * 100).toFixed(0);
+
+const fallbackPrice = btcEnd.price;
+const fallbackPriceJson = JSON.stringify(fallbackPrice);
 ---
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-  {stats.map((stat) => (
-    <div class="bg-navy-900 rounded-2xl p-5 border border-navy-700">
-      <p class="text-sm text-navy-400 mb-2">{stat.label}</p>
-      <p class:list={["text-3xl font-mono font-bold", stat.color]}>{stat.value}</p>
-      <p class="text-xs text-navy-500 mt-2">{stat.detail}</p>
-    </div>
-  ))}
+  <div class="bg-navy-900 rounded-2xl p-5 border border-navy-700">
+    <p class="text-sm text-navy-400 mb-2">Dollar debasement since 1971</p>
+    <p class="text-3xl font-mono font-bold text-red-accent">-{totalDebasement}%</p>
+    <p class="text-xs text-navy-500 mt-2">$1.00 &rarr; ${(baseCpi / currentCpi).toFixed(2)} in real terms</p>
+  </div>
+
+  <div class="bg-navy-900 rounded-2xl p-5 border border-navy-700">
+    <p class="text-sm text-navy-400 mb-2">M2 money supply growth</p>
+    <p class="text-3xl font-mono font-bold text-red-accent">{m2Growth}%</p>
+    <p class="text-xs text-navy-500 mt-2">${m2Start}T &rarr; ${m2End.toFixed(1)}T since 1971</p>
+  </div>
+
+  <div class="bg-navy-900 rounded-2xl p-5 border border-navy-700">
+    <p class="text-sm text-navy-400 mb-2">Bitcoin CAGR since 2010</p>
+    <p class="text-3xl font-mono font-bold text-green-accent">{btcCagr}%</p>
+    <p class="text-xs text-navy-500 mt-2">${btcStart.price} &rarr; $<span id="statBtcPrice">{btcEnd.price.toLocaleString()}</span> per year avg</p>
+  </div>
+
+  <div class="bg-navy-900 rounded-2xl p-5 border border-navy-700">
+    <p class="text-sm text-navy-400 mb-2">
+      <span>Live BTC price</span>
+      <span id="statLiveDot" class="inline-block w-1.5 h-1.5 rounded-full bg-navy-500 ml-1 align-middle"></span>
+    </p>
+    <p id="statLivePrice" class="text-3xl font-mono font-bold text-btc">
+      ${fallbackPrice.toLocaleString()}
+    </p>
+    <p id="statLiveDetail" class="text-xs text-navy-500 mt-2">
+      Static estimate &mdash; connecting...
+    </p>
+  </div>
 </div>
+
+<script define:vars={{ fallbackPriceJson }}>
+  // Listen for live price updates from LiveBtcPrice component
+  window.addEventListener("btc-price-update", (e) => {
+    const { price, change24h, live } = e.detail;
+
+    const priceEl = document.getElementById("statLivePrice");
+    const detailEl = document.getElementById("statLiveDetail");
+    const dotEl = document.getElementById("statLiveDot");
+
+    if (priceEl) {
+      priceEl.textContent = "$" + price.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    if (detailEl) {
+      if (live) {
+        const isPositive = change24h >= 0;
+        const arrow = isPositive ? "\u25B2" : "\u25BC";
+        detailEl.textContent = `${arrow} ${Math.abs(change24h).toFixed(2)}% in 24h`;
+        detailEl.className = isPositive
+          ? "text-xs mt-2 text-green-accent"
+          : "text-xs mt-2 text-red-accent";
+      } else {
+        detailEl.textContent = "API unavailable \u2014 using cached data";
+        detailEl.className = "text-xs text-navy-500 mt-2";
+      }
+    }
+
+    if (dotEl) {
+      dotEl.className = live
+        ? "inline-block w-1.5 h-1.5 rounded-full bg-green-accent ml-1 align-middle"
+        : "inline-block w-1.5 h-1.5 rounded-full bg-navy-500 ml-1 align-middle";
+    }
+  });
+</script>

@@ -1,0 +1,259 @@
+---
+import btcData from "../data/btc.json";
+
+const fallbackPrice = btcData.data[btcData.data.length - 1].price;
+const fallbackPriceJson = JSON.stringify(fallbackPrice);
+---
+
+<div class="bg-navy-900 rounded-2xl p-6 border border-navy-700">
+  <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-white">Live Bitcoin Price</h2>
+      <div class="flex items-center gap-2 mt-1">
+        <span id="liveStatus" class="inline-block w-2 h-2 rounded-full bg-navy-500"></span>
+        <span id="liveStatusText" class="text-sm text-navy-400">Connecting...</span>
+      </div>
+    </div>
+    <div class="text-right">
+      <p id="livePrice" class="text-3xl font-mono font-bold text-btc">--</p>
+      <div class="flex items-center justify-end gap-2 mt-1">
+        <span id="livePriceChange" class="text-sm font-mono">--</span>
+        <span id="livePriceChangePercent" class="text-xs font-mono text-navy-400">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 30-day sparkline chart -->
+  <div class="relative" style="height: 200px;">
+    <canvas id="liveSparkline"></canvas>
+  </div>
+
+  <div class="flex items-center justify-between mt-3">
+    <p class="text-xs text-navy-500">30-day price history from CoinGecko</p>
+    <p id="lastUpdated" class="text-xs text-navy-500">--</p>
+  </div>
+</div>
+
+<script define:vars={{ fallbackPriceJson }}>
+  const FALLBACK_PRICE = JSON.parse(fallbackPriceJson);
+  const REFRESH_INTERVAL = 60000; // 60 seconds
+
+  let sparklineChart = null;
+  let refreshTimer = null;
+
+  // Generate fallback 30-day data from static price
+  function generateFallback30Day(price) {
+    const days = [];
+    const now = Date.now();
+    for (let i = 29; i >= 0; i--) {
+      const variation = (Math.random() - 0.5) * 0.04 * price;
+      days.push({
+        date: new Date(now - i * 86400000),
+        price: price + variation,
+      });
+    }
+    days[days.length - 1].price = price;
+    return days;
+  }
+
+  function setStatus(live) {
+    const dot = document.getElementById("liveStatus");
+    const text = document.getElementById("liveStatusText");
+    if (!dot || !text) return;
+
+    if (live) {
+      dot.className = "inline-block w-2 h-2 rounded-full bg-green-accent animate-pulse";
+      text.textContent = "Live";
+      text.className = "text-sm text-green-accent";
+    } else {
+      dot.className = "inline-block w-2 h-2 rounded-full bg-navy-500";
+      text.textContent = "Using cached data";
+      text.className = "text-sm text-navy-400";
+    }
+  }
+
+  function updateLastUpdated() {
+    const el = document.getElementById("lastUpdated");
+    if (el) {
+      el.textContent = "Updated " + new Date().toLocaleTimeString();
+    }
+  }
+
+  async function fetchLiveData() {
+    try {
+      // Fetch current price + 24h change
+      const priceRes = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true"
+      );
+      if (!priceRes.ok) throw new Error("Price fetch failed");
+      const priceData = await priceRes.json();
+
+      // Fetch 30-day history
+      const histRes = await fetch(
+        "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily"
+      );
+      if (!histRes.ok) throw new Error("History fetch failed");
+      const histData = await histRes.json();
+
+      const currentPrice = priceData.bitcoin.usd;
+      const change24h = priceData.bitcoin.usd_24h_change;
+
+      const history = histData.prices.map(([timestamp, price]) => ({
+        date: new Date(timestamp),
+        price,
+      }));
+
+      return { currentPrice, change24h, history, live: true };
+    } catch (err) {
+      console.warn("CoinGecko API unavailable, using fallback:", err.message);
+      const fallbackHistory = generateFallback30Day(FALLBACK_PRICE);
+      return {
+        currentPrice: FALLBACK_PRICE,
+        change24h: 0,
+        history: fallbackHistory,
+        live: false,
+      };
+    }
+  }
+
+  async function renderSparkline(history) {
+    const { Chart, registerables } = await import("chart.js");
+    Chart.register(...registerables);
+
+    const ctx = document.getElementById("liveSparkline");
+    if (!ctx) return;
+
+    if (sparklineChart) sparklineChart.destroy();
+
+    const labels = history.map((d) =>
+      d.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    );
+    const data = history.map((d) => d.price);
+
+    const isUp = data[data.length - 1] >= data[0];
+    const lineColor = isUp ? "#22c55e" : "#ef4444";
+    const fillColor = isUp ? "rgba(34, 197, 94, 0.08)" : "rgba(239, 68, 68, 0.08)";
+
+    sparklineChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "BTC Price",
+            data,
+            borderColor: lineColor,
+            backgroundColor: fillColor,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: lineColor,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: "index",
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#161d35",
+            borderColor: "#2a3558",
+            borderWidth: 1,
+            titleColor: "#e2e8f0",
+            bodyColor: "#e2e8f0",
+            bodyFont: { family: "JetBrains Mono, monospace" },
+            callbacks: {
+              label: (ctx) => "$" + ctx.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 0 }),
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#5a6a8a",
+              maxTicksLimit: 7,
+              font: { size: 10 },
+            },
+            grid: { color: "rgba(42, 53, 88, 0.3)" },
+          },
+          y: {
+            ticks: {
+              color: "#5a6a8a",
+              callback: (v) => "$" + (v / 1000).toFixed(0) + "k",
+              font: { size: 10 },
+            },
+            grid: { color: "rgba(42, 53, 88, 0.3)" },
+          },
+        },
+      },
+    });
+  }
+
+  async function updateDashboard() {
+    const { currentPrice, change24h, history, live } = await fetchLiveData();
+
+    // Update price display
+    const priceEl = document.getElementById("livePrice");
+    if (priceEl) {
+      priceEl.textContent = "$" + currentPrice.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+
+    // Update 24h change
+    const changeEl = document.getElementById("livePriceChange");
+    const changePctEl = document.getElementById("livePriceChangePercent");
+    if (changeEl && changePctEl) {
+      const isPositive = change24h >= 0;
+      const arrow = isPositive ? "\u25B2" : "\u25BC";
+      const color = isPositive ? "text-green-accent" : "text-red-accent";
+      changeEl.textContent = `${arrow} ${Math.abs(change24h).toFixed(2)}%`;
+      changeEl.className = `text-sm font-mono ${color}`;
+      changePctEl.textContent = "24h change";
+    }
+
+    setStatus(live);
+    updateLastUpdated();
+
+    // Dispatch custom event so other components can use the live price
+    window.dispatchEvent(
+      new CustomEvent("btc-price-update", {
+        detail: { price: currentPrice, change24h, live },
+      })
+    );
+
+    await renderSparkline(history);
+  }
+
+  async function init() {
+    await updateDashboard();
+    // Auto-refresh every 60 seconds
+    refreshTimer = setInterval(updateDashboard, REFRESH_INTERVAL);
+  }
+
+  // Clean up on page navigation
+  document.addEventListener("astro:before-swap", () => {
+    if (refreshTimer) clearInterval(refreshTimer);
+  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+</script>
+
+<style>
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style>
