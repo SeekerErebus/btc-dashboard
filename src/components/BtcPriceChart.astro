@@ -1,8 +1,8 @@
 ---
 import btcData from "../data/btc.json";
 
-const labels = JSON.stringify(btcData.data.map((d) => d.year));
-const prices = JSON.stringify(btcData.data.map((d) => d.price));
+const labels = btcData.data.map((d) => d.year);
+const prices = btcData.data.map((d) => d.price);
 const currentPrice = btcData.data[btcData.data.length - 1].price;
 ---
 
@@ -26,27 +26,28 @@ const currentPrice = btcData.data[btcData.data.length - 1].price;
     </div>
   </div>
   <div class="relative" style="height: 350px;">
-    <canvas id="btcPriceChart"></canvas>
+    <canvas id="btcPriceChart"
+      data-labels={JSON.stringify(labels)}
+      data-prices={JSON.stringify(prices)}
+    ></canvas>
   </div>
 </div>
 
-<script define:vars={{ labels, prices }}>
-  const labelsArr = JSON.parse(labels);
-  const pricesArr = JSON.parse(prices);
+<script>
+  import { Chart, registerables } from "chart.js";
+  Chart.register(...registerables);
 
-  let chartInstance = null;
+  const canvas = document.getElementById("btcPriceChart") as HTMLCanvasElement;
+  if (canvas) {
+    const labelsArr = JSON.parse(canvas.dataset.labels!);
+    const pricesArr = JSON.parse(canvas.dataset.prices!);
 
-  async function initChart() {
-    const { Chart, registerables } = await import("chart.js");
-    Chart.register(...registerables);
+    let chartInstance: Chart | null = null;
 
-    const ctx = document.getElementById("btcPriceChart");
-    if (!ctx) return;
-
-    function createChart(useLog) {
+    function createChart(useLog: boolean) {
       if (chartInstance) chartInstance.destroy();
 
-      chartInstance = new Chart(ctx, {
+      chartInstance = new Chart(canvas, {
         type: "line",
         data: {
           labels: labelsArr,
@@ -105,10 +106,10 @@ const currentPrice = btcData.data[btcData.data.length - 1].price;
                 callback: (v) => {
                   if (useLog) {
                     const allowed = [0.1, 1, 10, 100, 1000, 10000, 100000];
-                    if (allowed.includes(v)) return "$" + v.toLocaleString();
+                    if (allowed.includes(v as number)) return "$" + (v as number).toLocaleString();
                     return "";
                   }
-                  return "$" + v.toLocaleString();
+                  return "$" + (v as number).toLocaleString();
                 },
               },
               grid: { color: "rgba(42, 53, 88, 0.5)" },
@@ -123,14 +124,8 @@ const currentPrice = btcData.data[btcData.data.length - 1].price;
     const toggle = document.getElementById("logScaleToggle");
     if (toggle) {
       toggle.addEventListener("change", (e) => {
-        createChart(e.target.checked);
+        createChart((e.target as HTMLInputElement).checked);
       });
     }
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initChart);
-  } else {
-    initChart();
   }
 </script>

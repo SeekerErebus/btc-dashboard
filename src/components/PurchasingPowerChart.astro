@@ -21,15 +21,14 @@ const btcPurchasingPower = cpiData.data.map((d) => {
   };
 }).filter(Boolean);
 
-const labels = JSON.stringify(purchasingPower.map((d) => d.year));
-const dollarValues = JSON.stringify(purchasingPower.map((d) => d.value));
+const labels = purchasingPower.map((d) => d.year);
+const dollarValues = purchasingPower.map((d) => d.value);
 
 // For the BTC overlay, we need to align years with the full CPI timeline
 const btcOverlay = cpiData.data.map((d) => {
   const entry = btcPurchasingPower.find((b) => b.year === d.year);
   return entry ? entry.value : null;
 });
-const btcOverlayJson = JSON.stringify(btcOverlay);
 
 const currentDollarPP = purchasingPower[purchasingPower.length - 1].value;
 const btcLastEntry = btcPurchasingPower[btcPurchasingPower.length - 1];
@@ -70,7 +69,11 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
   </div>
 
   <div class="relative" style="height: 400px;">
-    <canvas id="purchasingPowerChart"></canvas>
+    <canvas id="purchasingPowerChart"
+      data-labels={JSON.stringify(labels)}
+      data-dollar-values={JSON.stringify(dollarValues)}
+      data-btc-overlay={JSON.stringify(btcOverlay)}
+    ></canvas>
   </div>
 
   <p class="text-xs text-navy-500 mt-3">
@@ -79,24 +82,22 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
   </p>
 </div>
 
-<script define:vars={{ labels, dollarValues, btcOverlayJson }}>
-  const labelsArr = JSON.parse(labels);
-  const dollarArr = JSON.parse(dollarValues);
-  const btcArr = JSON.parse(btcOverlayJson);
+<script>
+  import { Chart, registerables } from "chart.js";
+  Chart.register(...registerables);
 
-  let chartInstance = null;
+  const canvas = document.getElementById("purchasingPowerChart") as HTMLCanvasElement;
+  if (canvas) {
+    const labelsArr = JSON.parse(canvas.dataset.labels!);
+    const dollarArr = JSON.parse(canvas.dataset.dollarValues!);
+    const btcArr = JSON.parse(canvas.dataset.btcOverlay!);
 
-  async function initChart() {
-    const { Chart, registerables } = await import("chart.js");
-    Chart.register(...registerables);
+    let chartInstance: Chart | null = null;
 
-    const ctx = document.getElementById("purchasingPowerChart");
-    if (!ctx) return;
-
-    function createChart(showBtc, useLog) {
+    function createChart(showBtc: boolean, useLog: boolean) {
       if (chartInstance) chartInstance.destroy();
 
-      const datasets = [
+      const datasets: any[] = [
         {
           label: "Dollar Purchasing Power ($)",
           data: dollarArr,
@@ -130,13 +131,13 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
         });
       }
 
-      const yConfig = {
+      const yConfig: any = {
         y: {
           type: "linear",
           position: "left",
           ticks: {
             color: "#ef4444",
-            callback: (v) => "$" + v.toFixed(2),
+            callback: (v: number) => "$" + v.toFixed(2),
           },
           grid: { color: "rgba(42, 53, 88, 0.5)" },
           min: 0,
@@ -156,7 +157,7 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
           position: "right",
           ticks: {
             color: "#F7931A",
-            callback: (v) => {
+            callback: (v: number) => {
               if (useLog) {
                 const allowed = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000];
                 if (allowed.includes(v)) return "$" + v.toLocaleString();
@@ -175,7 +176,7 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
         };
       }
 
-      chartInstance = new Chart(ctx, {
+      chartInstance = new Chart(canvas, {
         type: "line",
         data: {
           labels: labelsArr,
@@ -207,7 +208,7 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
               callbacks: {
                 label: (tooltipCtx) => {
                   const val = tooltipCtx.parsed.y;
-                  if (val === null) return null;
+                  if (val === null) return null as any;
                   if (tooltipCtx.datasetIndex === 0) {
                     return `Dollar: $${val.toFixed(2)} of original $1.00`;
                   }
@@ -236,16 +237,13 @@ const btcMultiple = btcLastEntry ? Math.round(btcLastEntry.value).toLocaleString
     const logToggle = document.getElementById("ppLogScale");
 
     function rebuild() {
-      createChart(btcToggle?.checked ?? true, logToggle?.checked ?? false);
+      createChart(
+        (btcToggle as HTMLInputElement)?.checked ?? true,
+        (logToggle as HTMLInputElement)?.checked ?? false
+      );
     }
 
     btcToggle?.addEventListener("change", rebuild);
     logToggle?.addEventListener("change", rebuild);
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initChart);
-  } else {
-    initChart();
   }
 </script>

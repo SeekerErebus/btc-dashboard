@@ -2,7 +2,6 @@
 import btcData from "../data/btc.json";
 
 const fallbackPrice = btcData.data[btcData.data.length - 1].price;
-const fallbackPriceJson = JSON.stringify(fallbackPrice);
 ---
 
 <div class="bg-navy-900 rounded-2xl p-6 border border-navy-700">
@@ -25,7 +24,7 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
 
   <!-- 30-day sparkline chart -->
   <div class="relative" style="height: 200px;">
-    <canvas id="liveSparkline"></canvas>
+    <canvas id="liveSparkline" data-fallback-price={fallbackPrice.toString()}></canvas>
   </div>
 
   <div class="flex items-center justify-between mt-3">
@@ -34,15 +33,19 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
   </div>
 </div>
 
-<script define:vars={{ fallbackPriceJson }}>
-  const FALLBACK_PRICE = JSON.parse(fallbackPriceJson);
+<script>
+  import { Chart, registerables } from "chart.js";
+  Chart.register(...registerables);
+
+  const canvas = document.getElementById("liveSparkline") as HTMLCanvasElement;
+  const FALLBACK_PRICE = parseFloat(canvas?.dataset.fallbackPrice || "0");
   const REFRESH_INTERVAL = 60000; // 60 seconds
 
-  let sparklineChart = null;
-  let refreshTimer = null;
+  let sparklineChart: Chart | null = null;
+  let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   // Generate fallback 30-day data from static price
-  function generateFallback30Day(price) {
+  function generateFallback30Day(price: number) {
     const days = [];
     const now = Date.now();
     for (let i = 29; i >= 0; i--) {
@@ -56,7 +59,7 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
     return days;
   }
 
-  function setStatus(live) {
+  function setStatus(live: boolean) {
     const dot = document.getElementById("liveStatus");
     const text = document.getElementById("liveStatusText");
     if (!dot || !text) return;
@@ -98,13 +101,13 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
       const currentPrice = priceData.bitcoin.usd;
       const change24h = priceData.bitcoin.usd_24h_change;
 
-      const history = histData.prices.map(([timestamp, price]) => ({
+      const history = histData.prices.map(([timestamp, price]: [number, number]) => ({
         date: new Date(timestamp),
         price,
       }));
 
       return { currentPrice, change24h, history, live: true };
-    } catch (err) {
+    } catch (err: any) {
       console.warn("CoinGecko API unavailable, using fallback:", err.message);
       const fallbackHistory = generateFallback30Day(FALLBACK_PRICE);
       return {
@@ -116,12 +119,8 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
     }
   }
 
-  async function renderSparkline(history) {
-    const { Chart, registerables } = await import("chart.js");
-    Chart.register(...registerables);
-
-    const ctx = document.getElementById("liveSparkline");
-    if (!ctx) return;
+  function renderSparkline(history: { date: Date; price: number }[]) {
+    if (!canvas) return;
 
     if (sparklineChart) sparklineChart.destroy();
 
@@ -134,7 +133,7 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
     const lineColor = isUp ? "#22c55e" : "#ef4444";
     const fillColor = isUp ? "rgba(34, 197, 94, 0.08)" : "rgba(239, 68, 68, 0.08)";
 
-    sparklineChart = new Chart(ctx, {
+    sparklineChart = new Chart(canvas, {
       type: "line",
       data: {
         labels,
@@ -186,7 +185,7 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
           y: {
             ticks: {
               color: "#5a6a8a",
-              callback: (v) => "$" + (v / 1000).toFixed(0) + "k",
+              callback: (v) => "$" + ((v as number) / 1000).toFixed(0) + "k",
               font: { size: 10 },
             },
             grid: { color: "rgba(42, 53, 88, 0.3)" },
@@ -227,7 +226,7 @@ const fallbackPriceJson = JSON.stringify(fallbackPrice);
       })
     );
 
-    await renderSparkline(history);
+    renderSparkline(history);
   }
 
   async function init() {

@@ -1,8 +1,8 @@
 ---
 import m2Data from "../data/m2.json";
 
-const labels = JSON.stringify(m2Data.data.map((d) => d.year));
-const values = JSON.stringify(m2Data.data.map((d) => d.m2));
+const labels = m2Data.data.map((d) => d.year);
+const values = m2Data.data.map((d) => d.m2);
 const currentM2 = m2Data.data[m2Data.data.length - 1].m2;
 const startM2 = m2Data.data[0].m2;
 const growthMultiple = (currentM2 / startM2).toFixed(0);
@@ -22,7 +22,10 @@ const growthMultiple = (currentM2 / startM2).toFixed(0);
     </div>
   </div>
   <div class="relative" style="height: 350px;">
-    <canvas id="m2Chart"></canvas>
+    <canvas id="m2Chart"
+      data-labels={JSON.stringify(labels)}
+      data-values={JSON.stringify(values)}
+    ></canvas>
   </div>
   <p class="text-xs text-navy-500 mt-3">
     Note the exponential acceleration after 2008 (Financial Crisis) and 2020 (COVID stimulus).
@@ -30,18 +33,16 @@ const growthMultiple = (currentM2 / startM2).toFixed(0);
   </p>
 </div>
 
-<script define:vars={{ labels, values }}>
-  const labelsArr = JSON.parse(labels);
-  const valuesArr = JSON.parse(values);
+<script>
+  import { Chart, registerables } from "chart.js";
+  Chart.register(...registerables);
 
-  async function initChart() {
-    const { Chart, registerables } = await import("chart.js");
-    Chart.register(...registerables);
+  const canvas = document.getElementById("m2Chart") as HTMLCanvasElement;
+  if (canvas) {
+    const labelsArr = JSON.parse(canvas.dataset.labels!);
+    const valuesArr = JSON.parse(canvas.dataset.values!);
 
-    const ctx = document.getElementById("m2Chart");
-    if (!ctx) return;
-
-    new Chart(ctx, {
+    new Chart(canvas, {
       type: "bar",
       data: {
         labels: labelsArr,
@@ -49,12 +50,12 @@ const growthMultiple = (currentM2 / startM2).toFixed(0);
           {
             label: "M2 Supply ($T)",
             data: valuesArr,
-            backgroundColor: labelsArr.map((year) => {
+            backgroundColor: labelsArr.map((year: number) => {
               if (year >= 2020) return "rgba(239, 68, 68, 0.7)";
               if (year >= 2008) return "rgba(239, 68, 68, 0.45)";
               return "rgba(239, 68, 68, 0.25)";
             }),
-            borderColor: labelsArr.map((year) => {
+            borderColor: labelsArr.map((year: number) => {
               if (year >= 2020) return "#ef4444";
               if (year >= 2008) return "rgba(239, 68, 68, 0.7)";
               return "rgba(239, 68, 68, 0.5)";
@@ -104,11 +105,5 @@ const growthMultiple = (currentM2 / startM2).toFixed(0);
         },
       },
     });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initChart);
-  } else {
-    initChart();
   }
 </script>
